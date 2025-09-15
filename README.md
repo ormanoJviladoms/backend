@@ -28,19 +28,7 @@ A més, programem en **JavaScript**, un llenguatge versàtil i universal que ens
 - 📦 **NPM** → Gestió de dependències i paquets.  
 - 🌐 **Express.js** → Per muntar la nostra API REST de manera neta i estructurada.  
 - 🗄️ **Base de dades** → Utilitzarem MongoDB com a base no relacional.
-
----
-
-## 🔗 API i funcionalitats  
-
-Les funcionalitats principals del backend seran:  
-- **Autenticació d’usuaris** (registre, login, tokens).  
-- **Gestió de productes** (CRUD complet per les samarretes).  
-- **Gestió de comandes** (afegir a la cistella, eliminar, finalitzar compra).  
-- **Gestió de dades** amb respostes JSON clares i estructurades.  
-
-A més, la nostra API estarà preparada per connectar-se fàcilment amb el frontend i garantir una experiència fluida a l’usuari final.  
-
+  
 ---
 
 ## ✨ Per què TrueFacts?  
