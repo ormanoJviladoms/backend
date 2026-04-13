@@ -1,7 +1,13 @@
 // src/services/detallComandaService.js
 const DetallComanda = require('../models/DetallComanda');
+const Product = require('../models/Product');
 
 const createDetallComanda = async (detallComandaData) => {
+  const producte = await Product.findById(detallComandaData.producte);
+  if (!producte) throw new Error('Producte no trobat');
+  detallComandaData.nom_producte = producte.nom;
+  detallComandaData.preu_unitari = producte.preu;
+
   const detallComanda = new DetallComanda(detallComandaData);
   return await detallComanda.save();
 };

@@ -12,6 +12,14 @@ const DetallComandaSchema = mongoose.Schema({
     ref: 'Product',
     required: true,
   },
+  nom_producte: {
+    type: String,
+    required: true,
+  },
+  preu_unitari: {
+    type: Number,
+    required: true,
+  },
   quantitat: {
     type: Number,
     required: true,

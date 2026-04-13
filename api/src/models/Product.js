@@ -17,6 +17,7 @@ const ProductSchema = new mongoose.Schema(
     },
     preu: { type: Number, required: true, min: 0, max: 9999 },
     estoc: { type: Number, required: true, min: 0 },
+    imatge: { type: String, default: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=800&q=80" },
     descripcio: { type: String },
   },
   { timestamps: true }
