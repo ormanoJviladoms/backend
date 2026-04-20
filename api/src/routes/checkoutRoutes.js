@@ -51,4 +51,7 @@ const router = express.Router();
  */
 router.post('/', authMiddleware, checkoutController.processCheckout);
 
+// Stripe Checkout
+router.post('/create-session', authMiddleware, checkoutController.createSession);
+
 module.exports = router;

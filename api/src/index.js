@@ -8,11 +8,16 @@ const enviamentRoutes = require('./routes/enviamentRoutes');
 const pagamentRoutes = require('./routes/pagamentRoutes');
 const checkoutRoutes = require('./routes/checkoutRoutes');
 const authRoutes = require('./routes/authRoutes');
+const checkoutController = require('./controllers/checkoutController');
 const cors = require("cors");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
 const app = express();
 app.use(cors());
+
+// Webhook de Stripe necessita el body raw (abans de express.json)
+app.post('/api/checkout/webhook', express.raw({ type: 'application/json' }), checkoutController.webhook);
+
 app.use(express.json());
 
 // Documentació Swagger
