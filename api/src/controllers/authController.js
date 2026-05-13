@@ -2,11 +2,14 @@ const Usuari = require('../models/Usuari');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'secret_clau_super_segura';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh_secret_clau_super_segura';
+
 // Helper per generar Access Token
 const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, rol: user.rol, email: user.correu },
-    process.env.JWT_SECRET,
+    JWT_SECRET,
     { expiresIn: '15m' }
   );
 };
@@ -15,7 +18,7 @@ const generateAccessToken = (user) => {
 const generateRefreshToken = (user) => {
   return jwt.sign(
     { id: user._id },
-    process.env.JWT_REFRESH_SECRET,
+    JWT_REFRESH_SECRET,
     { expiresIn: '7d' }
   );
 };
@@ -24,7 +27,7 @@ const generateRefreshToken = (user) => {
 // @route   POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { nom, email, password, rol, direccio, telefon } = req.body;
+    const { nom, email, password, direccio, telefon } = req.body;
 
     // Camps obligatoris mínims
     if (!nom || !email || !password) {
@@ -52,7 +55,7 @@ exports.register = async (req, res) => {
       nom,
       correu: email.toLowerCase(),
       contrasenya: hashedPassword,
-      rol: rol || 'client',
+      rol: 'client',
       direccio,
       telefon
     });
@@ -163,7 +166,7 @@ exports.refresh = async (req, res) => {
     }
 
     // Verificar token JWT
-    jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
+    jwt.verify(refreshToken, JWT_REFRESH_SECRET, (err, decoded) => {
       if (err) {
         return res.status(403).json({ 
           status: 'error', 
@@ -209,4 +212,3 @@ exports.logout = async (req, res) => {
     res.status(500).json({ status: 'error', message: error.message });
   }
 };
-

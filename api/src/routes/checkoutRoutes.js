@@ -53,5 +53,6 @@ router.post('/', authMiddleware, checkoutController.processCheckout);
 
 // Stripe Checkout
 router.post('/create-session', authMiddleware, checkoutController.createSession);
+router.get('/session/:sessionId', authMiddleware, checkoutController.confirmSession);
 
 module.exports = router;

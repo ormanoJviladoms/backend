@@ -58,7 +58,7 @@ const processCheckout = async ({ comandaId, pagament, enviament }) => {
     comanda: comandaId,
     estat: 'completat',
     import_total: importTotal,
-    metode: pagament.metode, // 'targeta', 'paypal', 'transferencia'
+    metode: pagament.metode,
     data_pagament: new Date(),
   });
   await newPagament.save();
@@ -66,7 +66,7 @@ const processCheckout = async ({ comandaId, pagament, enviament }) => {
   // 6. Crear l'enviament
   const newEnviament = new Enviament({
     comanda: comandaId,
-    data_sortida: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // +2 dies
+    data_sortida: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
     empresa_transport: enviament.empresa_transport || 'SEUR',
     codi_seguiment: `TF-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
   });

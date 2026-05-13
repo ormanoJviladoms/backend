@@ -1,6 +1,7 @@
 // src/services/detallComandaService.js
 const DetallComanda = require('../models/DetallComanda');
 const Product = require('../models/Product');
+const Comanda = require('../models/Comanda');
 
 const createDetallComanda = async (detallComandaData) => {
   const producte = await Product.findById(detallComandaData.producte);
@@ -12,8 +13,15 @@ const createDetallComanda = async (detallComandaData) => {
   return await detallComanda.save();
 };
 
-const getDetallsComanda = async () => {
-  return await DetallComanda.find().populate('comanda').populate('producte');
+const getDetallsComanda = async ({ userId, role }) => {
+  const filter = {};
+
+  if (role !== 'admin') {
+    const comandes = await Comanda.find({ usuari: userId }).select('_id');
+    filter.comanda = { $in: comandes.map((comanda) => comanda._id) };
+  }
+
+  return await DetallComanda.find(filter).populate('comanda').populate('producte');
 };
 
 const getDetallComandaById = async (id) => {

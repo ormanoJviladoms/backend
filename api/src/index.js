@@ -8,6 +8,7 @@ const enviamentRoutes = require('./routes/enviamentRoutes');
 const pagamentRoutes = require('./routes/pagamentRoutes');
 const checkoutRoutes = require('./routes/checkoutRoutes');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const checkoutController = require('./controllers/checkoutController');
 const cors = require("cors");
 const swaggerUi = require('swagger-ui-express');
@@ -35,6 +36,7 @@ app.get("/", (req, res) => {
 
 // Sistema de rutes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use('/api/comandes', comandaRoutes);
 app.use('/api/detallscomanda', detallComandaRoutes);

@@ -6,8 +6,9 @@ const createComanda = async (comandaData) => {
   return await newComanda.save();
 };
 
-const getComandes = async () => {
-  return await Comanda.find().populate('usuari');
+const getComandes = async ({ userId, role }) => {
+  const filter = role === 'admin' ? {} : { usuari: userId };
+  return await Comanda.find(filter).populate('usuari').sort({ data: -1 });
 };
 
 const getComandaById = async (id) => {

@@ -7,6 +7,63 @@ const Product = require('../models/Product');
 const Pagament = require('../models/Pagament');
 const Enviament = require('../models/Enviament');
 
+const finalizePaidOrder = async (comandaId) => {
+  const detalls = await DetallComanda.find({ comanda: comandaId }).populate('producte');
+  let importTotal = 0;
+
+  for (const detall of detalls) {
+    const preu = detall.preu_unitari || (detall.producte ? detall.producte.preu : 0);
+    importTotal += preu * detall.quantitat;
+  }
+
+  const comanda = await Comanda.findOneAndUpdate(
+    { _id: comandaId, estat: 'pendent' },
+    { estat: 'processant', import_total: importTotal },
+    { new: true }
+  );
+
+  if (!comanda) {
+    const existingComanda = await Comanda.findById(comandaId);
+    if (!existingComanda) {
+      throw new Error('Comanda no trobada');
+    }
+    return existingComanda;
+  }
+
+  for (const detall of detalls) {
+    if (detall.producte) {
+      await Product.findByIdAndUpdate(detall.producte._id, {
+        $inc: { estoc: -detall.quantitat },
+      });
+    }
+  }
+
+  await Pagament.findOneAndUpdate(
+    { comanda: comandaId },
+    {
+      comanda: comandaId,
+      estat: 'completat',
+      import_total: importTotal,
+      metode: 'stripe',
+      data_pagament: new Date(),
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  await Enviament.findOneAndUpdate(
+    { comanda: comandaId },
+    {
+      comanda: comandaId,
+      data_sortida: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      empresa_transport: 'TRUE FACTS EXPRESS',
+      codi_seguiment: `TF-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  return comanda;
+};
+
 const processCheckout = async (req, res) => {
   try {
     const { comandaId, pagament, enviament } = req.body;
@@ -81,13 +138,13 @@ const createSession = async (req, res) => {
         quantity: detall.quantitat,
       });
     }
-// Create Stripe Checkout Session
+    const frontendUrl = req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5173';
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items,
       mode: 'payment',
-      success_url: 'http://localhost:5173/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'http://localhost:5173/checkout/cancel',
+      success_url: `${frontendUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/checkout/cancel`,
       metadata: {
         comandaId: comandaId.toString(),
         userId: userId.toString(),
@@ -105,6 +162,42 @@ const createSession = async (req, res) => {
   } catch (error) {
     console.error('Error creant sessió Stripe:', error.message);
     res.status(400).json({ status: 'error', message: 'Error en el pagament' });
+  }
+};
+
+// GET /api/checkout/session/:sessionId
+const confirmSession = async (req, res) => {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
+
+    if (!session || !session.metadata?.comandaId) {
+      return res.status(404).json({ status: 'error', message: 'Sessio de pagament no trobada' });
+    }
+
+    if (session.metadata.userId !== req.user.id) {
+      return res.status(403).json({ status: 'error', message: 'No tens permisos sobre aquesta sessio' });
+    }
+
+    if (session.payment_status !== 'paid') {
+      return res.status(200).json({
+        status: 'pending',
+        message: 'Stripe encara no marca el pagament com a completat',
+        data: { paymentStatus: session.payment_status }
+      });
+    }
+
+    const comanda = await finalizePaidOrder(session.metadata.comandaId);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        paymentStatus: session.payment_status,
+        comanda,
+      }
+    });
+  } catch (error) {
+    console.error('Error confirmant sessio Stripe:', error.message);
+    res.status(400).json({ status: 'error', message: 'No s\'ha pogut verificar el pagament' });
   }
 };
 
@@ -130,48 +223,7 @@ const webhook = async (req, res) => {
     const comandaId = session.metadata.comandaId;
 
     try {
-      const comanda = await Comanda.findById(comandaId);
-      if (!comanda || comanda.estat !== 'pendent') {
-        return res.status(200).json({ received: true });
-      }
-
-      // Deduct stock
-      const detalls = await DetallComanda.find({ comanda: comandaId }).populate('producte');
-      let importTotal = 0;
-
-      for (const detall of detalls) {
-        const preu = detall.preu_unitari || (detall.producte ? detall.producte.preu : 0);
-        importTotal += preu * detall.quantitat;
-
-        if (detall.producte) {
-          await Product.findByIdAndUpdate(detall.producte._id, {
-            $inc: { estoc: -detall.quantitat },
-          });
-        }
-      }
-
-      // Update order
-      comanda.estat = 'processant';
-      comanda.import_total = importTotal;
-      await comanda.save();
-
-      // Create payment record
-      await new Pagament({
-        comanda: comandaId,
-        estat: 'completat',
-        import_total: importTotal,
-        metode: 'stripe',
-        data_pagament: new Date(),
-      }).save();
-
-      // Create shipment record
-      await new Enviament({
-        comanda: comandaId,
-        data_sortida: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        empresa_transport: 'TRUE FACTS EXPRESS',
-        codi_seguiment: `TF-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      }).save();
-
+      await finalizePaidOrder(comandaId);
     } catch (err) {
       console.error('Error processant webhook:', err.message);
     }
@@ -183,5 +235,6 @@ const webhook = async (req, res) => {
 module.exports = {
   processCheckout,
   createSession,
+  confirmSession,
   webhook,
 };
